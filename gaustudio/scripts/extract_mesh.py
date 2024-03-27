@@ -67,7 +67,12 @@ def main():
     else:
         print("Model not found at {}".format(model_path))
     pcd.to("cuda")
-    
+
+    points = pcd.get_attribute('xyz').cpu().numpy()
+    center = points.mean(axis=0)
+    radius = np.percentile(np.linalg.norm(points - center, axis=1), 95)
+    vdb_voxel_size = radius / 256
+
     if args.camera is None:
         args.camera = os.path.join(model_path, "cameras.json")
     if os.path.exists(args.camera):
@@ -78,7 +83,7 @@ def main():
         for camera_json in camera_data:
             camera = JSON_to_camera(camera_json, "cuda")
             cameras.append(camera)
-        vdb_volume = vdbfusion.VDBVolume(voxel_size=0.02, sdf_trunc=0.08, space_carving=True) # For Scene
+        vdb_volume = vdbfusion.VDBVolume(voxel_size=vdb_voxel_size, sdf_trunc=vdb_voxel_size*4, space_carving=False) # For Scene
     else:
         assert "Camera data not found at {}".format(args.camera)
 
